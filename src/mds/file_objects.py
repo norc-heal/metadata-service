@@ -36,12 +36,17 @@ bearer = HTTPBearer(auto_error=False)
 
 
 @mod.get("/file_objects", status_code=HTTP_200_OK)
-async def get_file_object() -> list:
+async def get_file_objects() -> list:
     """
     TODO
     """
     requests = await FileObject.query.gino.all()
     return {"records": [r.to_dict() for r in requests]}
+
+
+@mod.get("/file_objects:{guid:path}", status_code=HTTP_200_OK)
+async def get_file_object():
+    res = await FileObject
 
 
 @mod.post("/file_objects")
@@ -157,6 +162,25 @@ async def add(
         raise HTTPException(HTTP_409_CONFLICT, f"did '{did}' already exists")
 
     return res["did"], res["rev"], res["baseid"]
+
+
+@mod.delete("/file_objects/{guid:path}")
+async def delete(guid, rev):
+    """
+    Delete a record given the guid and rev(revision)
+    """
+    try:
+        await (
+            FileObject.delete()
+            .where(FileObject.guid == guid and FileObject.rev == rev)
+            .returning(*FileObject)
+            .gino.first()
+        )
+        return JSONResponse({}, HTTP_204_NO_CONTENT)
+    except httpx.HTTPError as err:
+        logger.debug(err)
+        if err.response:
+            raise HTTPException(err.response.status_code, {"Error": err.response.text})
 
 
 def init_app(app):

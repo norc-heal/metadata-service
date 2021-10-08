@@ -54,9 +54,16 @@ def test_create(client):
 def test_delete(client):
     assert client.get("/metadata_index").json() == []
 
-    client.post("/metadata_index/a.b.c").raise_for_status()
+    resp = client.post("/metadata_index/a.b.c")
+
     resp = client.delete("/metadata_index/a.b.c")
-    resp.raise_for_status()
+    resp.status_code == 204
 
     resp = client.delete("/metadata_index/a.b.c")
     assert resp.status_code == 404
+
+
+def test_get(client):
+    assert client.get("/metadata_index").json() == []
+
+    resp = client.post("/metadata_index/a.b.c")
