@@ -29,7 +29,6 @@ bleach = ">=3.3.1"
 tenacity = ">=8.0.0"
 jsonschema = "^2.5.1"
 Flask = "^2.0.2"
-tests = "^0.007"
 swagger-spec-validator = "^2.7.3"
 
 [tool.poetry.dev-dependencies]

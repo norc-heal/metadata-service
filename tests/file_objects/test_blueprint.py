@@ -1,7 +1,7 @@
 import flask
 import pytest
 
-import tests.util as util
+import file_objects.util as util
 
 from indexd.bulk.blueprint import blueprint as indexd_bulk_blueprint
 from indexd.index.blueprint import blueprint as indexd_index_blueprint
