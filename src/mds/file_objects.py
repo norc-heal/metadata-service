@@ -3,7 +3,6 @@ from enum import Enum
 
 from authutils.token.fastapi import access_token
 from asyncpg import UniqueViolationError
-from dateutil import parser
 from fastapi import HTTPException, APIRouter, Depends, Query, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
