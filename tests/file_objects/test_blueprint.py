@@ -7,8 +7,8 @@ from indexd.bulk.blueprint import blueprint as indexd_bulk_blueprint
 from indexd.index.blueprint import blueprint as indexd_index_blueprint
 from indexd.alias.blueprint import blueprint as indexd_alias_blueprint
 
-from indexd.index.drivers.alchemy import SQLAlchemyIndexDriver
-from indexd.alias.drivers.alchemy import SQLAlchemyAliasDriver
+from src.mds.indexd.alchemy import SQLAlchemyIndexDriver
+from src.mds.indexd.alchemy import SQLAlchemyAliasDriver
 
 
 DIST_CONFIG = []
