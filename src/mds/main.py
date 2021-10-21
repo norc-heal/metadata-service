@@ -17,7 +17,7 @@ except ImportError:
     from importlib_metadata import entry_points
 
 from . import logger, config
-from .models import db
+from .models import db, FileObject
 
 
 def get_app():
@@ -94,15 +94,15 @@ def load_modules(app=None):
     # FIXME: Identify the cause for duplicate entry points (PXP-8443)
     # Added a set on entry points to dodge the intermittent duplicate modules issue
     for ep in set(entry_points()["mds.modules"]):
-        mod = ep.load()
-        if app and hasattr(mod, "init_app"):
-            mod.init_app(app)
-        msg = "Loaded module: "
+        msg = "Loading module: "
         logger.info(
             msg + "%s",
             ep.name,
             extra={"color_message": msg + click.style("%s", fg="cyan")},
         )
+        mod = ep.load()
+        if app and hasattr(mod, "init_app"):
+            mod.init_app(app)
 
 
 router = APIRouter()
@@ -140,3 +140,22 @@ async def get_status():
     return dict(
         status="OK", timestamp=now, aggregate_metadata_enabled=config.USE_AGG_MDS
     )
+
+
+@router.get("/_stats")
+@router.get("/_stats/")
+async def get_status():
+    """
+    Returns the status of the MDS:
+     * error: if there was no error this will be "none"
+     * last_update: timestamp of the last data pull from the commons
+     * count: number of entries
+    :return:
+    """
+    filecount = await db.func.count(FileObject.did).gino.scalar()
+
+    totalfilesize = await db.func.sum(FileObject.size).gino.scalar()
+    if totalfilesize is None:
+        totalfilesize = 0
+
+    return {"fileCount": filecount, "totalFileSize": totalfilesize}

@@ -2357,6 +2357,11 @@ def test_update_all_versions_fail_on_missing_permissions(client, user, use_mock_
 
 
 def test_index_stats(client, user):
+    # test that the stat file number and size is consistent with empty DB
+    index_stats = client.get("/_stats/").json()
+    assert index_stats["fileCount"] == 0
+    assert index_stats["totalFileSize"] == 0
+
     # populate the index with three different size records
     data1 = get_doc()
     res = client.post("/index/", json=data1, headers=user)
@@ -2370,9 +2375,9 @@ def test_index_stats(client, user):
     res = client.post("/index/", json=data3, headers=user)
     assert res.status_code == 200
     data_size = data1["size"] + data2["size"] + data3["size"]
-    index_stats = client.get("/_stats/").json()
 
     # test that the stat file number and size is consistent with post
+    index_stats = client.get("/_stats/").json()
     assert index_stats["fileCount"] == 3
     assert index_stats["totalFileSize"] == data_size
 
