@@ -1,5 +1,5 @@
 from elasticsearch import Elasticsearch, exceptions as es_exceptions
-from typing import List, Dict
+from typing import Any, List, Dict
 import json
 from mds import logger
 from mds.config import AGG_MDS_NAMESPACE
@@ -157,7 +157,7 @@ async def get_commons():
         return []
 
 
-async def get_all_metadata(limit, offset):
+async def get_all_metadata(limit: int, offset: int, flatten: bool) -> Dict[str, Any]:
     try:
         res = elastic_search_client.search(
             index=AGG_MDS_INDEX,

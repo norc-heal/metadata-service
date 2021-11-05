@@ -23,6 +23,9 @@ async def metadata(
         20, description="Maximum number of records returned. (max: 2000)"
     ),
     offset: int = Query(0, description="Return results at this given offset."),
+    flatten: bool = Query(
+        False, description="Return results without commons namespacing"
+    ),
 ):
     # TODO WFH How to properly return this? We think grouping by MDS is probably
     # not ideal in reality. We already have commons_name in the results.
@@ -42,7 +45,7 @@ async def metadata(
 
 
 @mod.get("/aggregate/metadata/{name}")
-async def metadata_name(name: str):
+async def metadata_name(name: str, flatten: bool = False):
     """
     Returns the all the metadata from the named commons.
     """
