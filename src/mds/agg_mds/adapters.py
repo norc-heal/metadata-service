@@ -19,6 +19,8 @@ from mds import logger
 
 
 def strip_email(text: str):
+    if not isinstance(text, str):
+        return text
     rgx = r"[\w.+-]+@[\w-]+\.[\w.-]+"
     matches = re.findall(rgx, text)
     for cur_word in matches:
@@ -27,14 +29,20 @@ def strip_email(text: str):
 
 
 def strip_html(s: str):
+    if not isinstance(s, str):
+        return s
     return bleach.clean(s, tags=[], strip=True)
 
 
 def add_icpsr_source_url(study_id: str):
+    if not isinstance(study_id, str):
+        return study_id
     return f"https://www.icpsr.umich.edu/web/NAHDAP/studies/{study_id}"
 
 
 def add_clinical_trials_source_url(study_id: str):
+    if not isinstance(study_id, str):
+        return study_id
     return f"https://clinicaltrials.gov/ct2/show/{study_id}"
 
 
@@ -54,14 +62,20 @@ class FieldFilters:
         return FieldFilters.filters[name](value)
 
 
-def get_json_path_value(expression: str, item: dict) -> Union[str, List[Any]]:
+def get_json_path_value(
+    expression: str,
+    item: dict,
+    has_default_value: bool = False,
+    default_value: str = "",
+) -> Union[str, List[Any]]:
     """
     Given a JSON Path expression and a dictionary, using the path expression
-    to find the value. If not found return an empty string
+    to find the value. If not found return and default value define return it, else
+    return None
     """
 
     if expression is None:
-        return ""
+        return default_value if has_default_value else None
 
     try:
         jsonpath_expr = parse(expression)
@@ -69,11 +83,11 @@ def get_json_path_value(expression: str, item: dict) -> Union[str, List[Any]]:
         logger.error(
             f"Invalid JSON Path expression {exc} . See https://github.com/json-path/JsonPath. Returning ''"
         )
-        return ""
+        return default_value if has_default_value else None
 
     v = jsonpath_expr.find(item)
-    if len(v) == 0:  # nothing found use default value of empty string
-        return ""
+    if len(v) == 0:  # nothing found, deal with this
+        return default_value if has_default_value else None
 
     if len(v) == 1:  # convert array length 1 to a value
         return v[0].value
@@ -116,7 +130,7 @@ class RemoteMetadataAdapter(ABC):
         """needs to be implemented in derived class"""
 
     @staticmethod
-    def mapFields(item: dict, mappings: dict, global_filters=None) -> dict:
+    def mapFields(item: dict, mappings: dict, global_filters=None, schema=None) -> dict:
         """
         Given a MetaData entry as a dict, and dictionary describing fields to add
         and optionally where to map an item entry from.
@@ -132,12 +146,16 @@ class RemoteMetadataAdapter(ABC):
         field: {
             path: JSON Path
             filters: [process field filters]
+            default_value(optional): Any Value
         }
 
         :param item: dictionary to map fields to
         :param mappings:
         :return:
         """
+
+        if schema is None:
+            schema = {}
 
         if global_filters is None:
             global_filters = []
@@ -147,7 +165,23 @@ class RemoteMetadataAdapter(ABC):
         for key, value in mappings.items():
             if isinstance(value, dict):  # have a complex assignment
                 expression = value.get("path", None)
-                field_value = get_json_path_value(expression, item)
+
+                hasDefaultValue = False
+                default_value = None
+                # get adapter's default value if set
+                if "default" in value:
+                    hasDefaultValue = True
+                    default_value = value["default"]
+
+                # get schema default value if set
+                if hasDefaultValue is False:
+                    if key in schema and schema[key].default is not None:
+                        hasDefaultValue = True
+                        default_value = schema[key].default
+
+                field_value = get_json_path_value(
+                    expression, item, hasDefaultValue, default_value
+                )
 
                 filters = value.get("filters", [])
                 for filter in filters:
@@ -156,12 +190,25 @@ class RemoteMetadataAdapter(ABC):
             elif isinstance(value, str) and "path:" in value:
                 # process as json path
                 expression = value.split("path:")[1]
-                field_value = get_json_path_value(expression, item)
+
+                hasDefaultValue = False
+                default_value = None
+                if key in schema:
+                    d = schema[key].default
+                    if d is not None:
+                        hasDefaultValue = True
+                        default_value = d
+
+                field_value = get_json_path_value(
+                    expression, item, hasDefaultValue, default_value
+                )
             else:
                 field_value = value
 
             for f in global_filters:
                 field_value = FieldFilters.execute(f, field_value)
+            if key in schema:
+                field_value = schema[key].normalize_value(field_value)
             results[key] = field_value
         return results
 
@@ -217,7 +264,7 @@ class ISCPSRDublin(RemoteMetadataAdapter):
                     raise
                 except httpx.HTTPError as exc:
                     logger.error(
-                        f"An HTTP error { exc.response.status_code if exc.response is not None else '' } occurred while requesting {exc.request.url}. Skipping {id}"
+                        f"An HTTP error {exc.response.status_code if exc.response is not None else ''} occurred while requesting {exc.request.url}. Skipping {id}"
                     )
                 except ValueError as exc:
                     logger.error(
