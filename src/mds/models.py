@@ -1,5 +1,6 @@
 from gino.ext.starlette import Gino
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Integer
 
 from . import config
 
@@ -19,4 +20,5 @@ class Metadata(db.Model):
     __tablename__ = "metadata"
 
     guid = db.Column(db.Unicode(), primary_key=True)
+    id = db.Column(Integer, autoincrement=True)
     data = db.Column(JSONB())
