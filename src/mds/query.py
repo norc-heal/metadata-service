@@ -72,10 +72,10 @@ async def search_metadata(
         return query.offset(offset).limit(limit)
 
     if data:
-        return {
-            metadata.guid: metadata.data
-            for metadata in await add_filter(Metadata.query).gino.all()
-        }
+        metadata_result = await add_filter(Metadata.query).gino.all()
+        for metadata in metadata_result:
+            metadata.data["id"] = metadata.id
+        return {metadata.guid: metadata.data for metadata in metadata_result}
     else:
         return [
             row[0]
