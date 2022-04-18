@@ -1,5 +1,6 @@
 import gino
 import pytest
+from alembic.config import main
 
 
 @pytest.mark.parametrize("key", ["test_get", "dg.1234/test_get"])
@@ -16,14 +17,21 @@ def test_get(client, key):
 
 
 def test_query_data(client):
+    # reset internal IDs in MDS DB for testing
+    main(["--raiseerr", "downgrade", "base"])
+    main(["--raiseerr", "upgrade", "head"])
+
     data = dict(a=1, b=2)
+    # assign internal IDs to expected result data
+    tqd_1_data = dict(a=1, b=2, id=1)
+    tqd_2_data = dict(a=1, b=2, id=2)
     try:
         client.post("/metadata/tqd_1", json=data).raise_for_status()
         client.post("/metadata/tqd_2", json=data).raise_for_status()
         assert client.get("/metadata").json() == ["tqd_1", "tqd_2"]
         assert client.get("/metadata?data=true").json() == {
-            "tqd_1": data,
-            "tqd_2": data,
+            "tqd_1": tqd_1_data,
+            "tqd_2": tqd_2_data,
         }
     finally:
         client.delete("/metadata/tqd_1")
