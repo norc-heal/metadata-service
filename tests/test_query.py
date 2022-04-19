@@ -5,10 +5,16 @@ from alembic.config import main
 
 @pytest.mark.parametrize("key", ["test_get", "dg.1234/test_get"])
 def test_get(client, key):
+    # reset internal IDs in MDS DB for testing
+    main(["--raiseerr", "downgrade", "base"])
+    main(["--raiseerr", "upgrade", "head"])
+
     data = dict(a=1, b=2)
+    # assign internal IDs to expected result data
+    result_data = dict(a=1, b=2, gen3_internal_id=1)
     client.post("/metadata/" + key, json=data).raise_for_status()
     try:
-        assert client.get("/metadata/" + key).json() == data
+        assert client.get("/metadata/" + key).json() == result_data
 
         resp = client.get("/metadata/{}_not_exist".format(key))
         assert resp.status_code == 404
@@ -23,8 +29,8 @@ def test_query_data(client):
 
     data = dict(a=1, b=2)
     # assign internal IDs to expected result data
-    tqd_1_data = dict(a=1, b=2, id=1)
-    tqd_2_data = dict(a=1, b=2, id=2)
+    tqd_1_data = dict(a=1, b=2, gen3_internal_id=1)
+    tqd_2_data = dict(a=1, b=2, gen3_internal_id=2)
     try:
         client.post("/metadata/tqd_1", json=data).raise_for_status()
         client.post("/metadata/tqd_2", json=data).raise_for_status()

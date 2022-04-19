@@ -3,6 +3,7 @@ from starlette.requests import Request
 from starlette.status import HTTP_404_NOT_FOUND
 
 from .models import db, Metadata
+from mds import config
 
 mod = APIRouter()
 
@@ -66,15 +67,22 @@ async def search_metadata(
 
     def add_filter(query):
         for path, values in queries.items():
-            query = query.where(
-                db.or_(Metadata.data[list(path.split("."))].astext == v for v in values)
-            )
+            if path == config.DB_GEN3_INTERNAL_ID_ALIAS:
+                query = query.where(
+                    db.or_(Metadata.id[path].astext == v for v in values)
+                )
+            else:
+                query = query.where(
+                    db.or_(
+                        Metadata.data[list(path.split("."))].astext == v for v in values
+                    )
+                )
         return query.offset(offset).limit(limit)
 
     if data:
         metadata_result = await add_filter(Metadata.query).gino.all()
         for metadata in metadata_result:
-            metadata.data["id"] = metadata.id
+            metadata.data[config.DB_GEN3_INTERNAL_ID_ALIAS] = metadata.id
         return {metadata.guid: metadata.data for metadata in metadata_result}
     else:
         return [
@@ -90,6 +98,9 @@ async def get_metadata(guid):
     """Get the metadata of the GUID."""
     metadata = await Metadata.get(guid)
     if metadata:
+        if metadata.id:
+            print(config.DB_GEN3_INTERNAL_ID_ALIAS)
+            metadata.data[config.DB_GEN3_INTERNAL_ID_ALIAS] = metadata.id
         return metadata.data
     else:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
