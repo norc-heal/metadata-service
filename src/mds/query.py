@@ -98,9 +98,6 @@ async def get_metadata(guid):
     """Get the metadata of the GUID."""
     metadata = await Metadata.get(guid)
     if metadata:
-        if metadata.id:
-            print(config.DB_GEN3_INTERNAL_ID_ALIAS)
-            metadata.data[config.DB_GEN3_INTERNAL_ID_ALIAS] = metadata.id
         return metadata.data
     else:
         raise HTTPException(HTTP_404_NOT_FOUND, f"Not found: {guid}")
