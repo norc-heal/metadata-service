@@ -11,7 +11,7 @@ def test_get(client, key):
 
     data = dict(a=1, b=2)
     # assign internal IDs to expected result data
-    result_data = dict(a=1, b=2, gen3_internal_id=1)
+    result_data = dict(a=1, b=2)
     client.post("/metadata/" + key, json=data).raise_for_status()
     try:
         assert client.get("/metadata/" + key).json() == result_data
